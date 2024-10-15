@@ -1,16 +1,14 @@
-import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import os
 import numpy as np
 import librosa
 from skimage.transform import resize
 import io
 import tensorflow as tf
 
-from flask_cors import CORS
-
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
 
 classes = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
 
@@ -60,9 +58,11 @@ def model_prediction(X_test):
     max_count = np.max(counts)
     max_elements = unique_elements[counts==max_count]
     return max_elements[0]
+
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({"message": "SonataAI API is running"}), 200
+
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'file' not in request.files:
@@ -84,4 +84,5 @@ def predict():
             return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
