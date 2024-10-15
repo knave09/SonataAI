@@ -7,8 +7,10 @@ from skimage.transform import resize
 import io
 import tensorflow as tf
 
+from flask_cors import CORS
+
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": ["https://renaissance0ne.github.io", "http://localhost:3000"]}})
 
 classes = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
 
