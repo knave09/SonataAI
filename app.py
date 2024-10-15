@@ -1,75 +1,79 @@
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from tensorflow.keras.models import load_model
 import numpy as np
 import librosa
-from tensorflow.keras.models import load_model
-import os
+from skimage.transform import resize
+import io
 
 app = Flask(__name__)
+CORS(app)
 
-# Configure CORS with specific origins
-ALLOWED_ORIGINS = ['https://renaissance0ne.github.io', 'http://localhost:3000']
-CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}})
-
-# Load the trained model
+# Load the model
 model = load_model('trained_model.keras')
 
-# Define the genres (make sure this matches your model's output)
-genres = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
+classes = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
 
-def extract_features(file):
-    # Load the audio file
-    y, sr = librosa.load(file, duration=30)
+def load_and_preprocess_file(file, target_shape=(210, 210)):
+    data = []
+    audio_data, sample_rate = librosa.load(file, sr=None)
+    #define chunk and overlap duration
+    chunk_duration = 4
+    overlap_duration = 2
     
-    # Extract mel-spectrogram features
-    mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128)
-    mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
+    #Convert duration to sample
+    chunk_samples = chunk_duration * sample_rate
+    overlap_samples = overlap_duration * sample_rate
     
-    # Ensure the feature shape matches what your model expects
-    if mel_spec_db.shape[1] < 1292:
-        mel_spec_db = np.pad(mel_spec_db, ((0, 0), (0, 1292 - mel_spec_db.shape[1])), mode='constant')
-    else:
-        mel_spec_db = mel_spec_db[:, :1292]
-    
-    return mel_spec_db
+    #Calculate number of chunks
+    num_chunks = int(np.ceil((len(audio_data) - chunk_samples) / (chunk_samples - overlap_samples))) + 1
+
+    #Iterate over each chunks
+    for i in range(num_chunks):
+        #Calculate the start and end indices of the chunk
+        start = i * (chunk_samples - overlap_samples)
+        end = start + chunk_samples
+        #Extract the chunk audio
+        chunk = audio_data[start:end]
+        melspectrogram = librosa.feature.melspectrogram(y=chunk, sr=sample_rate)
+        melspectrogram = resize(np.expand_dims(melspectrogram, axis=-1), target_shape)
+        #Append data to list
+        data.append(melspectrogram)
+    return np.array(data)
+
+def model_prediction(X_test):
+    y_pred = model.predict(X_test)
+    predicted_categories = np.argmax(y_pred, axis=1)
+    unique_elements, counts = np.unique(predicted_categories, return_counts=True)
+    max_count = np.max(counts)
+    max_elements = unique_elements[counts==max_count]
+    return max_elements[0]
 
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'file' not in request.files:
-        return jsonify({'error': 'No file part in the request'}), 400
+        return jsonify({'error': 'No file part'})
     
     file = request.files['file']
-    
     if file.filename == '':
-        return jsonify({'error': 'No file selected for uploading'}), 400
+        return jsonify({'error': 'No selected file'})
     
     if file:
-        # Save the file temporarily
-        temp_path = 'temp_audio.mp3'
-        file.save(temp_path)
-        
         try:
-            # Extract features
-            features = extract_features(temp_path)
+            # Load and preprocess the audio file
+            file_content = io.BytesIO(file.read())
+            X_test = load_and_preprocess_file(file_content)
             
             # Make prediction
-            prediction = model.predict(np.expand_dims(features, axis=0))
-            
-            # Get the predicted genre
-            predicted_genre_index = np.argmax(prediction[0])
-            predicted_genre = genres[predicted_genre_index]
+            c_index = model_prediction(X_test)
+            predicted_genre = classes[c_index]
             
             return jsonify({'genre': predicted_genre})
-        
         except Exception as e:
             return jsonify({'error': str(e)}), 500
-        
-        finally:
-            # Clean up the temporary file
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-    
-    return jsonify({'error': 'Something went wrong'}), 500
+
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
