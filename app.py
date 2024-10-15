@@ -60,7 +60,9 @@ def model_prediction(X_test):
     max_count = np.max(counts)
     max_elements = unique_elements[counts==max_count]
     return max_elements[0]
-
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({"message": "SonataAI API is running"}), 200
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'file' not in request.files:
