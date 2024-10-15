@@ -10,11 +10,7 @@ import tensorflow as tf
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": [
-    "https://renaissance0ne.github.io",
-    "https://renaissance0ne.github.io/music_genre_classification/",
-    "http://localhost:3000"
-]}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 classes = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
 
@@ -88,5 +84,4 @@ def predict():
             return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
