@@ -10,7 +10,11 @@ import tensorflow as tf
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["https://renaissance0ne.github.io", "http://localhost:3000"]}})
+CORS(app, resources={r"/*": {"origins": [
+    "https://renaissance0ne.github.io",
+    "https://renaissance0ne.github.io/music_genre_classification/",
+    "http://localhost:3000"
+]}})
 
 classes = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
 
