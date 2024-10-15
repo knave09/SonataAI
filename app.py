@@ -8,7 +8,9 @@ import io
 import tensorflow as tf
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": ["https://renaissance0ne.github.io"],
+                              "methods": ["GET", "POST", "OPTIONS"],
+                              "allow_headers": ["Content-Type", "Authorization"]}})
 
 classes = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
 
