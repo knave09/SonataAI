@@ -8,21 +8,15 @@ import io
 import tensorflow as tf
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 classes = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
 
-# Load model only when needed
-model = None
-
-def load_model():
-    global model
-    if model is None:
-        # Load TensorFlow Lite model
-        interpreter = tf.lite.Interpreter(model_path="model.tflite")
-        interpreter.allocate_tensors()
-        model = interpreter
-    return model
+# Load model at startup
+print("Loading model...")
+interpreter = tf.lite.Interpreter(model_path="model.tflite")
+interpreter.allocate_tensors()
+print("Model loaded successfully")
 
 def load_and_preprocess_file(file, target_shape=(210, 210)):
     data = []
@@ -45,7 +39,6 @@ def load_and_preprocess_file(file, target_shape=(210, 210)):
     return np.array(data)
 
 def model_prediction(X_test):
-    interpreter = load_model()
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     
